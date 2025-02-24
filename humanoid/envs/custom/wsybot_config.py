@@ -179,17 +179,17 @@ class wsybotCfg(LeggedRobotCfg):
         # put some settings here for LLM parameter tuning
         target_joint_pos_scale = 0.17    # rad
         target_feet_height = 0.25        # m
-        cycle_time = 0.64                # sec
+        cycle_time = 0.70                # sec
         # if true negative total rewards are clipped at zero (avoids early termination problems)
         only_positive_rewards = True
         # tracking reward = exp(error*sigma)
         tracking_sigma = 5
-        max_contact_force = 600  # Forces above this value are penalized
+        max_contact_force = 700  # Forces above this value are penalized
 
         class scales:
             # reference motion tracking
             joint_pos = 1.6
-            feet_clearance = 2.0
+            feet_clearance = 2.5
             feet_contact_number = 1.2
             # gait
             feet_air_time = 2.5
@@ -206,11 +206,11 @@ class wsybotCfg(LeggedRobotCfg):
             track_vel_hard = 0.5
             # base pos
             default_joint_pos = 0.5
-            orientation = 1.
+            orientation = 3.
             base_height = 0.2
             base_acc = 0.2
             # energy
-            action_smoothness = -0.2
+            action_smoothness = -0.5
             torques = -1e-5
             dof_vel = -5e-4
             dof_acc = -1e-7

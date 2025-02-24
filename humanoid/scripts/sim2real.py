@@ -241,8 +241,8 @@ while True:
         eu_ang[eu_ang > math.pi] -= 2 * math.pi
         # print(eu_ang)
 
-        obs[0, 0] = math.sin(2 * math.pi * count_lowlevel * 0.02 / 0.64)
-        obs[0, 1] = math.cos(2 * math.pi * count_lowlevel * 0.02 / 0.64)
+        obs[0, 0] = math.sin(2 * math.pi * count_lowlevel * 0.02 / 0.70)
+        obs[0, 1] = math.cos(2 * math.pi * count_lowlevel * 0.02 / 0.70)
         obs[0, 2] = cmd.vx * 2
         obs[0, 3] = cmd.vy * 2
         obs[0, 4] = cmd.dyaw * 1
