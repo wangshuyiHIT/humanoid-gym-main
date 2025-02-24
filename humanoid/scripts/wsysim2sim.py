@@ -35,7 +35,7 @@ from tqdm import tqdm
 from collections import deque
 from scipy.spatial.transform import Rotation as R
 from humanoid import LEGGED_GYM_ROOT_DIR
-from humanoid.envs import XBotLCfg
+from humanoid.envs import wsybotCfg
 import torch
 
 
@@ -109,7 +109,21 @@ def run_mujoco(policy, cfg):
         hist_obs.append(np.zeros([1, cfg.env.num_single_obs], dtype=np.double))
 
     count_lowlevel = 0
+    default_angle =np.zeros((cfg.env.num_actions),dtype=np.double)
 
+    default_angle[0]=cfg.init_state.default_joint_angles['left_leg_roll_joint']
+    default_angle[1]=cfg.init_state.default_joint_angles['left_leg_yaw_joint']
+    default_angle[2]=cfg.init_state.default_joint_angles['left_leg_pitch_joint']
+    default_angle[3]=cfg.init_state.default_joint_angles['left_knee_joint']
+    default_angle[4]=cfg.init_state.default_joint_angles['left_ankle_pitch_joint']
+    default_angle[5]=cfg.init_state.default_joint_angles['left_ankle_roll_joint']
+    default_angle[6]=cfg.init_state.default_joint_angles['right_leg_roll_joint']
+    default_angle[7]=cfg.init_state.default_joint_angles['right_leg_yaw_joint']
+    default_angle[8]=cfg.init_state.default_joint_angles['right_leg_pitch_joint']
+    default_angle[9]=cfg.init_state.default_joint_angles['right_knee_joint']
+    default_angle[10]=cfg.init_state.default_joint_angles['right_ankle_pitch_joint']
+    default_angle[11]=cfg.init_state.default_joint_angles['right_ankle_roll_joint']
+    target_q = default_angle.copy()
 
     for _ in tqdm(range(int(cfg.sim_config.sim_duration / cfg.sim_config.dt)), desc="Simulating..."):
 
@@ -130,13 +144,23 @@ def run_mujoco(policy, cfg):
             obs[0, 2] = cmd.vx * cfg.normalization.obs_scales.lin_vel
             obs[0, 3] = cmd.vy * cfg.normalization.obs_scales.lin_vel
             obs[0, 4] = cmd.dyaw * cfg.normalization.obs_scales.ang_vel
-            obs[0, 5:17] = q * cfg.normalization.obs_scales.dof_pos
+            obs[0, 5:17] = (q-default_angle) * cfg.normalization.obs_scales.dof_pos
             obs[0, 17:29] = dq * cfg.normalization.obs_scales.dof_vel
             obs[0, 29:41] = action
             obs[0, 41:44] = omega
             obs[0, 44:47] = eu_ang
 
             obs = np.clip(obs, -cfg.normalization.clip_observations, cfg.normalization.clip_observations)
+            print('obs[0, 0]', math.sin(2 * math.pi * count_lowlevel * cfg.sim_config.dt  / 0.64))
+            print('obs[0, 1]',math.cos(2 * math.pi * count_lowlevel * cfg.sim_config.dt  / 0.64))
+            print('obs[0, 2]',cmd.vx * cfg.normalization.obs_scales.lin_vel)
+            print('obs[0, 3]',cmd.vy * cfg.normalization.obs_scales.lin_vel)
+            print('obs[0, 4]',cmd.dyaw * cfg.normalization.obs_scales.ang_vel)
+            print('obs[0, 5:17]',(q-default_angle) * cfg.normalization.obs_scales.dof_pos)
+            print('obs[0, 17:29]',dq * cfg.normalization.obs_scales.dof_vel)
+            print('obs[0, 29:41]',action)
+            print('obs[0, 41:44]',omega)
+            print('obs[0, 44:47]',eu_ang)
 
             hist_obs.append(obs)
             hist_obs.popleft()
@@ -147,7 +171,12 @@ def run_mujoco(policy, cfg):
             action[:] = policy(torch.tensor(policy_input))[0].detach().numpy()
             action = np.clip(action, -cfg.normalization.clip_actions, cfg.normalization.clip_actions)
 
-            target_q = action * cfg.control.action_scale
+            target_q = action * cfg.control.action_scale + default_angle
+
+            # if count_lowlevel>400:
+            #     target_q = action * cfg.control.action_scale+default_angle
+            # else:
+            #     target_q = default_angle
 
 
         target_dq = np.zeros((cfg.env.num_actions), dtype=np.double)
@@ -155,6 +184,7 @@ def run_mujoco(policy, cfg):
         tau = pd_control(target_q, q, cfg.robot_config.kps,
                         target_dq, dq, cfg.robot_config.kds)  # Calc torques
         tau = np.clip(tau, -cfg.robot_config.tau_limit, cfg.robot_config.tau_limit)  # Clamp torques
+        # tau = np.clip(tau, -0, 0)  # Clamp torques
         data.ctrl = tau
 
         mujoco.mj_step(model, data)
@@ -168,12 +198,12 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser(description='Deployment script.')
-    parser.add_argument('--load_model', type=str, required=True,
+    parser.add_argument('--load_model', type=str, required=True, default='/home/togakushi/humanoid_gym/logs/wsybot_ppo/exported/policies/policy_1.pt',
                         help='Run to load from.')
-    parser.add_argument('--terrain', action='store_true', help='terrain or plane')
+    parser.add_argument('--terrain', action='store_true', default='plane', help='terrain or plane')
     args = parser.parse_args()
 
-    class Sim2simCfg(XBotLCfg):
+    class Sim2simCfg(wsybotCfg):
 
         class sim_config:
             if args.terrain:
